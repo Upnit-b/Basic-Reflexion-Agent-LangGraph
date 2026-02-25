@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from schema import AnswerQuestion
+from schema import AnswerQuestion, ReviseAnswer
 from langchain_core.messages import HumanMessage
 import datetime
 
@@ -27,13 +27,32 @@ actor_prompt_template = ChatPromptTemplate.from_messages(
 
 
 first_responder_prompt_template = actor_prompt_template.partial(
-  first_instruction = "Provide a detailed ~250 word answer."
+    first_instruction="Provide a detailed ~250 word answer."
 )
 
-first_responder_chain = first_responder_prompt_template | llm.with_structured_output(AnswerQuestion)
+first_responder_chain = first_responder_prompt_template | llm.bind_tools([AnswerQuestion], tool_choice="AnswerQuestion")
 
-# response = first_responder_chain.invoke({
-#   "messages": [HumanMessage(content="Write a blog post on how small business can leverage AI to grow")]
-# })
 
-# print(response)
+
+
+# Revisor Chain
+revise_instructions = """
+Revise your previous answer using the new information.
+- You should use the previous critique to add important informatin to your answer.
+- You must include numerical citations in your revised answer to ensure it can be verified.
+- Add a "References" section at the bottom of your answer (which does not count towards the word limit), in the form of :
+  - [1] https://example.com
+  - [2] https://example2.com
+- You should use the previous critique to remove superfluous information from your answer and make sure it is not more than 250 words
+"""
+
+revisor_chain = actor_prompt_template.partial(
+    first_instruction=revise_instructions
+) | llm.bind_tools([ReviseAnswer], tool_choice="ReviseAnswer")
+
+
+response = first_responder_chain.invoke({
+  "messages": [HumanMessage(content="Write a blog post on how small business can leverage AI to grow")]
+})
+
+print(response)
