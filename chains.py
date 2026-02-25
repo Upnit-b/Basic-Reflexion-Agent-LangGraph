@@ -18,7 +18,7 @@ actor_prompt_template = ChatPromptTemplate.from_messages(
           Current time: {time}
           1. {first_instruction}
           2. Reflect and critique your answer. Be severe to maximize improvement.
-          3. After the reflection, **list 1-3 search queries separately** for researching improvements. Do not include them inside the reflection.
+          3. List 1-3 search queries for researching improvements.
         """),
         MessagesPlaceholder(variable_name="messages"),
         ("system", "Answer the user's question above using the required format.")
@@ -27,7 +27,7 @@ actor_prompt_template = ChatPromptTemplate.from_messages(
 
 
 first_responder_prompt_template = actor_prompt_template.partial(
-    first_instruction="Provide a detailed ~250 word answer."
+    first_instruction="Provide a detailed ~50 word answer."
 )
 
 first_responder_chain = first_responder_prompt_template | llm.bind_tools([AnswerQuestion], tool_choice="AnswerQuestion")
@@ -38,12 +38,13 @@ first_responder_chain = first_responder_prompt_template | llm.bind_tools([Answer
 # Revisor Chain
 revise_instructions = """
 Revise your previous answer using the new information.
-- You should use the previous critique to add important informatin to your answer.
-- You must include numerical citations in your revised answer to ensure it can be verified.
-- Add a "References" section at the bottom of your answer (which does not count towards the word limit), in the form of :
-  - [1] https://example.com
-  - [2] https://example2.com
-- You should use the previous critique to remove superfluous information from your answer and make sure it is not more than 250 words
+You must retain all fields:
+- answer (~50 words)
+- reflection (with 'missing' and 'superfluous')
+- search_queries (1-3 queries)
+- references (list of URLs)
+You must include numerical citations [1], [2] in the answer body.
+Add a "References" section at the bottom (not counted in word limit).
 """
 
 revisor_chain = actor_prompt_template.partial(
@@ -51,8 +52,8 @@ revisor_chain = actor_prompt_template.partial(
 ) | llm.bind_tools([ReviseAnswer], tool_choice="ReviseAnswer")
 
 
-response = first_responder_chain.invoke({
-  "messages": [HumanMessage(content="Write a blog post on how small business can leverage AI to grow")]
-})
+# response = first_responder_chain.invoke({
+#   "messages": [HumanMessage(content="Write a blog post on Varanasi")]
+# })
 
-print(response)
+# print(response)

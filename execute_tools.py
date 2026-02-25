@@ -1,6 +1,7 @@
 import json
 from typing import List, Dict, Any, TypedDict
 from langchain_core.messages import BaseMessage, AIMessage, ToolMessage, HumanMessage
+from langgraph.graph import MessagesState
 from langchain_tavily import TavilySearch
 from dotenv import load_dotenv
 
@@ -11,13 +12,13 @@ tavily_tool = TavilySearch(max_results=5)
 
 
 # Function to execute search queries from AnswerQuestion
-def execute_tools(state: List[BaseMessage]) -> List[BaseMessage]:
-    last_ai_message: AIMessage = state[-1]
+def execute_tools(state: MessagesState) -> MessagesState:
+    last_ai_message: AIMessage = state["messages"][-1]
     # print(last_ai_message)
 
     # Extract tool calls from the AI message
     if not hasattr(last_ai_message, "tool_calls") or not last_ai_message.tool_calls:
-        return []
+        return {"messages": []}
 
     # Process the AnswerQuestion or ReviseAnswer tool calls to extract search queries
     tool_messages = []
@@ -41,43 +42,43 @@ def execute_tools(state: List[BaseMessage]) -> List[BaseMessage]:
                 )
             )
 
-    return tool_messages
+    return {"messages": tool_messages}
 
 
 # Example usage
-test_state = [
-    HumanMessage(
-        content="Write about how small business can leverage AI to grow"
-    ),
-    AIMessage(
-        content="",
-        tool_calls=[
-            {
-                "name": "AnswerQuestion",
-                "args": {
-                    'answer': '',
-                    'search_queries': [
-                        'AI tools for small business',
-                        'AI in small business marketing',
-                        'AI automation for small business'
-                    ],
-                    'reflection': {
-                        'missing': '',
-                        'superfluous': ''
-                    }
-                },
-                "id": "call_KpYHichFFEmLitHFvFhKy1Ra",
-            }
-        ],
-    )
-]
+# test_state = [
+#     HumanMessage(
+#         content="Write about how small business can leverage AI to grow"
+#     ),
+#     AIMessage(
+#         content="",
+#         tool_calls=[
+#             {
+#                 "name": "AnswerQuestion",
+#                 "args": {
+#                     'answer': '',
+#                     'search_queries': [
+#                         'AI tools for small business',
+#                         'AI in small business marketing',
+#                         'AI automation for small business'
+#                     ],
+#                     'reflection': {
+#                         'missing': '',
+#                         'superfluous': ''
+#                     }
+#                 },
+#                 "id": "call_KpYHichFFEmLitHFvFhKy1Ra",
+#             }
+#         ],
+#     )
+# ]
 
-# Execute the tools
-results = execute_tools(test_state)
+# # Execute the tools
+# results = execute_tools(test_state)
 
-print("\n\n\n")
-print("Raw results:", results)
-if results:
-    parsed_content = json.loads(results[0].content)
-    print("\n\n\n")
-    print("Parsed content:", parsed_content)
+# print("\n\n\n")
+# print("Raw results:", results)
+# if results:
+#     parsed_content = json.loads(results[0].content)
+#     print("\n\n\n")
+#     print("Parsed content:", parsed_content)
